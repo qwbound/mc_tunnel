@@ -1,0 +1,31 @@
+# ┌──────────────────────────────────────────────┐
+# │  mc-tunnel — example configuration           │
+# │  Copy this file to config.toml and edit it.  │
+# │  cp config.example.toml config.toml          │
+# └──────────────────────────────────────────────┘
+
+# ── Mode ────────────────────────────────────────
+# "vps"    — run on your VPS (public server)
+# "client" — run on your home PC (Minecraft host)
+mode = "vps"
+
+# ── VPS settings ────────────────────────────────
+# Port where Minecraft players connect
+game_port = 25565
+
+# Port for the tunnel (control + data channels)
+tunnel_port = 9000
+
+# ── Client settings ─────────────────────────────
+# Address of your VPS tunnel port
+vps_address = "YOUR_VPS_IP:9000"
+
+# Address of your local Minecraft server
+minecraft_address = "127.0.0.1:25565"
+
+# ── Reconnect ───────────────────────────────────
+# Delay between reconnection attempts (seconds)
+reconnect_delay_secs = 3
+
+# Max reconnect attempts (0 = unlimited)
+max_reconnect_attempts = 0
