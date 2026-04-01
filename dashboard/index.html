@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MC-Tunnel v0.5 — Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0e1a;
+      color: #e2e8f0;
+    }
+
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    .bg-grid {
+      background-image:
+        linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .glass-card {
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(99, 102, 241, 0.15);
+      transition: all 0.3s ease;
+    }
+    .glass-card:hover {
+      border-color: rgba(99, 102, 241, 0.35);
+      box-shadow: 0 0 30px rgba(99, 102, 241, 0.08);
+    }
+
+    .gauge-ring {
+      transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .pulse-dot {
+      animation: pulse-ring 2s ease-in-out infinite;
+    }
+    @keyframes pulse-ring {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.5); }
+    }
+
+    .bar-fill {
+      transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .glow-text {
+      text-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
+    }
+
+    .sparkline-path {
+      transition: d 0.5s ease;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.3); border-radius: 3px; }
+
+    .temp-cool { color: #22d3ee; }
+    .temp-warm { color: #fbbf24; }
+    .temp-hot { color: #ef4444; }
+
+    .fade-in {
+      animation: fadeIn 0.6s ease-out forwards;
+      opacity: 0;
+    }
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+
+    .status-online { color: #34d399; }
+    .status-offline { color: #f87171; }
+
+    .chart-container { position: relative; }
+  </style>
+</head>
+<body class="min-h-screen bg-grid">
+
+  <!-- Top navigation -->
+  <nav class="sticky top-0 z-50 bg-[#0a0e1a]/90 backdrop-blur-xl border-b border-indigo-500/10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <span class="text-xl">⛏️</span>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold text-white tracking-tight">MC-Tunnel</h1>
+            <p class="text-[10px] text-indigo-400 font-mono tracking-widest uppercase">Dashboard v0.5</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <div id="connectionStatus" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-500/10 border border-slate-500/20">
+            <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+            <span class="text-xs font-medium text-slate-400">Connecting...</span>
+          </div>
+          <div class="text-xs font-mono text-slate-500" id="clock"></div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Host Info Banner -->
+    <div class="glass-card rounded-2xl p-5 fade-in" style="animation-delay: 0.1s">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+            <svg class="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h9a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0015.75 4.5h-9A2.25 2.25 0 004.5 6.75v10.5A2.25 2.25 0 006.75 19.5z"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-white font-semibold" id="hostName">Home PC</h2>
+            <p class="text-sm text-slate-400 font-mono" id="hostOS">Waiting for data...</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <div class="px-3 py-1.5 rounded-lg bg-slate-800/50 border border-slate-700/50">
+            <span class="text-[10px] text-slate-500 uppercase tracking-wider block">Kernel</span>
+            <span class="text-xs font-mono text-slate-300" id="kernelVersion">—</span>
+          </div>
+          <div class="px-3 py-1.5 rounded-lg bg-slate-800/50 border border-slate-700/50">
+            <span class="text-[10px] text-slate-500 uppercase tracking-wider block">Arch</span>
+            <span class="text-xs font-mono text-slate-300" id="archInfo">—</span>
+          </div>
+          <div class="px-3 py-1.5 rounded-lg bg-slate-800/50 border border-slate-700/50">
+            <span class="text-[10px] text-slate-500 uppercase tracking-wider block">Uptime</span>
+            <span class="text-xs font-mono text-slate-300" id="systemUptime">—</span>
+          </div>
+          <div class="px-3 py-1.5 rounded-lg bg-slate-800/50 border border-slate-700/50">
+            <span class="text-[10px] text-slate-500 uppercase tracking-wider block">MC Server</span>
+            <span class="text-xs font-mono text-emerald-400" id="mcServerStatus">127.0.0.1:25565</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main gauges row -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+
+      <!-- CPU Gauge -->
+      <div class="glass-card rounded-2xl p-5 fade-in text-center" style="animation-delay: 0.15s">
+        <div class="text-xs text-slate-500 uppercase tracking-wider mb-3 font-medium">CPU Usage</div>
+        <div class="relative inline-block">
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(99,102,241,0.1)" stroke-width="8"/>
+            <circle id="cpuGauge" cx="60" cy="60" r="52" fill="none" stroke="url(#cpuGrad)" stroke-width="8"
+              stroke-linecap="round" stroke-dasharray="326.73" stroke-dashoffset="326.73"
+              transform="rotate(-90 60 60)" class="gauge-ring"/>
+            <defs>
+              <linearGradient id="cpuGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#6366f1"/>
+                <stop offset="100%" stop-color="#a855f7"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="absolute inset-0 flex items-center justify-center flex-col">
+            <span class="text-2xl font-bold text-white font-mono" id="cpuPercent">—</span>
+            <span class="text-[10px] text-slate-500">%</span>
+          </div>
+        </div>
+        <p class="text-xs text-slate-400 mt-3 font-mono" id="cpuModel">—</p>
+        <p class="text-[10px] text-slate-500 mt-1" id="cpuCores">—</p>
+      </div>
+
+      <!-- RAM Gauge -->
+      <div class="glass-card rounded-2xl p-5 fade-in text-center" style="animation-delay: 0.2s">
+        <div class="text-xs text-slate-500 uppercase tracking-wider mb-3 font-medium">Memory</div>
+        <div class="relative inline-block">
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(34,211,238,0.1)" stroke-width="8"/>
+            <circle id="ramGauge" cx="60" cy="60" r="52" fill="none" stroke="url(#ramGrad)" stroke-width="8"
+              stroke-linecap="round" stroke-dasharray="326.73" stroke-dashoffset="326.73"
+              transform="rotate(-90 60 60)" class="gauge-ring"/>
+            <defs>
+              <linearGradient id="ramGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#06b6d4"/>
+                <stop offset="100%" stop-color="#22d3ee"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="absolute inset-0 flex items-center justify-center flex-col">
+            <span class="text-2xl font-bold text-white font-mono" id="ramPercent">—</span>
+            <span class="text-[10px] text-slate-500">%</span>
+          </div>
+        </div>
+        <p class="text-xs text-slate-400 mt-3 font-mono" id="ramUsed">— / —</p>
+        <p class="text-[10px] text-slate-500 mt-1" id="ramSwap">Swap: — / —</p>
+      </div>
+
+      <!-- Disk Gauge -->
+      <div class="glass-card rounded-2xl p-5 fade-in text-center" style="animation-delay: 0.25s">
+        <div class="text-xs text-slate-500 uppercase tracking-wider mb-3 font-medium">Disk</div>
+        <div class="relative inline-block">
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(251,191,36,0.1)" stroke-width="8"/>
+            <circle id="diskGauge" cx="60" cy="60" r="52" fill="none" stroke="url(#diskGrad)" stroke-width="8"
+              stroke-linecap="round" stroke-dasharray="326.73" stroke-dashoffset="326.73"
+              transform="rotate(-90 60 60)" class="gauge-ring"/>
+            <defs>
+              <linearGradient id="diskGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#f59e0b"/>
+                <stop offset="100%" stop-color="#fbbf24"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="absolute inset-0 flex items-center justify-center flex-col">
+            <span class="text-2xl font-bold text-white font-mono" id="diskPercent">—</span>
+            <span class="text-[10px] text-slate-500">%</span>
+          </div>
+        </div>
+        <p class="text-xs text-slate-400 mt-3 font-mono" id="diskUsed">— / —</p>
+        <p class="text-[10px] text-slate-500 mt-1" id="diskMount">/</p>
+      </div>
+
+      <!-- Temperature -->
+      <div class="glass-card rounded-2xl p-5 fade-in text-center" style="animation-delay: 0.3s">
+        <div class="text-xs text-slate-500 uppercase tracking-wider mb-3 font-medium">Temperature</div>
+        <div class="relative inline-block">
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(239,68,68,0.1)" stroke-width="8"/>
+            <circle id="tempGauge" cx="60" cy="60" r="52" fill="none" stroke="url(#tempGrad)" stroke-width="8"
+              stroke-linecap="round" stroke-dasharray="326.73" stroke-dashoffset="326.73"
+              transform="rotate(-90 60 60)" class="gauge-ring"/>
+            <defs>
+              <linearGradient id="tempGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#22d3ee"/>
+                <stop offset="50%" stop-color="#fbbf24"/>
+                <stop offset="100%" stop-color="#ef4444"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="absolute inset-0 flex items-center justify-center flex-col">
+            <span class="text-2xl font-bold text-white font-mono" id="tempValue">—</span>
+            <span class="text-[10px] text-slate-500">°C</span>
+          </div>
+        </div>
+        <p class="text-xs text-slate-400 mt-3" id="tempLabel">CPU Package</p>
+        <p class="text-[10px] text-slate-500 mt-1" id="tempMax">Max: —°C</p>
+      </div>
+    </div>
+
+    <!-- Middle row: CPU cores + Network -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+      <!-- CPU Core breakdown -->
+      <div class="glass-card rounded-2xl p-5 fade-in" style="animation-delay: 0.35s">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold text-white">CPU Cores</h3>
+          <span class="text-[10px] font-mono text-indigo-400" id="cpuFreq">— GHz</span>
+        </div>
+        <div class="space-y-2" id="coresList">
+          <div class="text-xs text-slate-600 font-mono">Waiting for sysinfo data...</div>
+        </div>
+      </div>
+
+      <!-- Network I/O -->
+      <div class="glass-card rounded-2xl p-5 fade-in" style="animation-delay: 0.4s">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold text-white">Network I/O</h3>
+          <span class="text-[10px] font-mono text-cyan-400" id="netInterface">—</span>
+        </div>
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div class="bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-3 text-center">
+            <div class="text-[10px] text-emerald-400 uppercase tracking-wider mb-1">↑ Upload</div>
+            <div class="text-lg font-bold font-mono text-emerald-300" id="netUp">0 B/s</div>
+            <div class="text-[10px] text-slate-500 font-mono mt-1" id="netUpTotal">Total: 0 MB</div>
+          </div>
+          <div class="bg-blue-500/5 border border-blue-500/10 rounded-xl p-3 text-center">
+            <div class="text-[10px] text-blue-400 uppercase tracking-wider mb-1">↓ Download</div>
+            <div class="text-lg font-bold font-mono text-blue-300" id="netDown">0 B/s</div>
+            <div class="text-[10px] text-slate-500 font-mono mt-1" id="netDownTotal">Total: 0 MB</div>
+          </div>
+        </div>
+        <!-- Network sparkline -->
+        <div class="h-20 w-full">
+          <svg id="netChart" width="100%" height="100%" viewBox="0 0 400 80" preserveAspectRatio="none">
+            <path id="netUpPath" d="" fill="rgba(52,211,153,0.1)" stroke="rgba(52,211,153,0.6)" stroke-width="1.5"/>
+            <path id="netDownPath" d="" fill="rgba(96,165,250,0.1)" stroke="rgba(96,165,250,0.6)" stroke-width="1.5"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom row: Processes + Disks detail + Tunnel traffic -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+      <!-- Top Processes -->
+      <div class="glass-card rounded-2xl p-5 fade-in" style="animation-delay: 0.45s">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold text-white">Top Processes</h3>
+          <span class="text-[10px] font-mono text-slate-500" id="processCount">0 total</span>
+        </div>
+        <div class="space-y-1.5 max-h-64 overflow-y-auto" id="processList">
+          <div class="text-xs text-slate-600 font-mono">Waiting for sysinfo data...</div>
+        </div>
+      </div>
+
+      <!-- Disks detail -->
+      <div class="glass-card rounded-2xl p-5 fade-in" style="animation-delay: 0.5s">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold text-white">Storage Volumes</h3>
+          <svg class="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"/>
+          </svg>
+        </div>
+        <div class="space-y-3" id="disksList">
+          <div class="text-xs text-slate-600 font-mono">Waiting for sysinfo data...</div>
+        </div>
+      </div>
+
+      <!-- Tunnel stats (from /api/stats) -->
+      <div class="glass-card rounded-2xl p-5 fade-in" style="animation-delay: 0.55s">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold text-white">Tunnel Stats</h3>
+          <div class="flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-slate-500" id="tunnelDot"></span>
+            <span class="text-[10px] text-slate-400 font-mono" id="tunnelStatus">—</span>
+          </div>
+        </div>
+        <div class="space-y-3">
+          <div class="flex justify-between items-center py-2 border-b border-slate-800">
+            <span class="text-xs text-slate-400">Active Players</span>
+            <span class="text-sm font-mono text-white font-medium" id="tunnelPlayers">0</span>
+          </div>
+          <div class="flex justify-between items-center py-2 border-b border-slate-800">
+            <span class="text-xs text-slate-400">Peak Connections</span>
+            <span class="text-sm font-mono text-white font-medium" id="tunnelPeak">0</span>
+          </div>
+          <div class="flex justify-between items-center py-2 border-b border-slate-800">
+            <span class="text-xs text-slate-400">Total Connections</span>
+            <span class="text-sm font-mono text-white font-medium" id="tunnelTotal">0</span>
+          </div>
+          <div class="flex justify-between items-center py-2 border-b border-slate-800">
+            <span class="text-xs text-slate-400">Traffic Forwarded</span>
+            <span class="text-sm font-mono text-indigo-400 font-medium" id="tunnelTraffic">0 B</span>
+          </div>
+          <div class="flex justify-between items-center py-2 border-b border-slate-800">
+            <span class="text-xs text-slate-400">Tunnel Uptime</span>
+            <span class="text-sm font-mono text-white font-medium" id="tunnelUptime">—</span>
+          </div>
+          <!-- Active IPs -->
+          <div class="mt-2">
+            <div class="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Active IPs</div>
+            <div class="space-y-1" id="activeIpsList">
+              <div class="text-xs text-slate-600 font-mono">No active connections</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CPU History Chart -->
+    <div class="glass-card rounded-2xl p-5 fade-in" style="animation-delay: 0.6s">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-semibold text-white">CPU & Memory History</h3>
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-1.5">
+            <span class="w-2.5 h-0.5 rounded bg-indigo-400"></span>
+            <span class="text-[10px] text-slate-500">CPU</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-2.5 h-0.5 rounded bg-cyan-400"></span>
+            <span class="text-[10px] text-slate-500">RAM</span>
+          </div>
+        </div>
+      </div>
+      <div class="h-32 w-full">
+        <svg id="historyChart" width="100%" height="100%" viewBox="0 0 600 120" preserveAspectRatio="none">
+          <line x1="0" y1="30" x2="600" y2="30" stroke="rgba(99,102,241,0.05)" stroke-width="1"/>
+          <line x1="0" y1="60" x2="600" y2="60" stroke="rgba(99,102,241,0.05)" stroke-width="1"/>
+          <line x1="0" y1="90" x2="600" y2="90" stroke="rgba(99,102,241,0.05)" stroke-width="1"/>
+          <text x="4" y="30" fill="rgba(148,163,184,0.3)" font-size="8" font-family="JetBrains Mono">75%</text>
+          <text x="4" y="60" fill="rgba(148,163,184,0.3)" font-size="8" font-family="JetBrains Mono">50%</text>
+          <text x="4" y="90" fill="rgba(148,163,184,0.3)" font-size="8" font-family="JetBrains Mono">25%</text>
+          <path id="cpuHistPath" d="" fill="rgba(99,102,241,0.08)" stroke="rgba(99,102,241,0.7)" stroke-width="1.5"/>
+          <path id="ramHistPath" d="" fill="rgba(34,211,238,0.06)" stroke="rgba(34,211,238,0.5)" stroke-width="1.5" stroke-dasharray="4 2"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center py-6 space-y-1">
+      <p class="text-xs text-slate-600">
+        MC-Tunnel v0.5 · Dashboard ·
+        <a href="https://github.com/qwbound/mc_tunnel" target="_blank" class="text-indigo-500 hover:text-indigo-400 transition">GitHub</a>
+      </p>
+      <p class="text-[10px] text-slate-700 font-mono">
+        SysInfo: <span class="text-indigo-500/60">sysinfo 0.30</span> crate · client → control stream → VPS API
+      </p>
+    </footer>
+  </main>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+//  MC-Tunnel v0.5 — Unified Dashboard
+//  /api/stats   — tunnel stats (existing, from VPS AppStats)
+//  /api/sysinfo — home PC system info (new, client → VPS)
+// ════════════════════════════════════════════════════════════════
+
+// API base — same origin (served by Axum on web_port)
+const API_BASE = window.location.origin;
+const POLL_INTERVAL = 2000;
+
+// ── History buffers ──
+const MAX_HISTORY = 120;
+const cpuHistory = [];
+const ramHistory = [];
+const netUpHistory = [];
+const netDownHistory = [];
+
+let prevNetUp = 0;
+let prevNetDown = 0;
+let hasSysinfo = false;
+
+// ── Helpers ──
+function formatBytes(b) {
+  if (b === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(b) / Math.log(k));
+  return (b / Math.pow(k, i)).toFixed(1) + ' ' + sizes[i];
+}
+
+function formatBytesPerSec(b) {
+  return formatBytes(b) + '/s';
+}
+
+function formatUptime(secs) {
+  const d = Math.floor(secs / 86400);
+  const h = Math.floor((secs % 86400) / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  if (d > 0) return `${d}d ${h}h ${m}m`;
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+function setGauge(id, percent, max = 100) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const circumference = 326.73;
+  const offset = circumference - (percent / max) * circumference;
+  el.style.strokeDashoffset = Math.max(0, offset);
+}
+
+function tempClass(t) {
+  if (t < 55) return 'temp-cool';
+  if (t < 75) return 'temp-warm';
+  return 'temp-hot';
+}
+
+function buildSparkline(data, svgWidth, svgHeight, maxVal) {
+  if (data.length < 2) return '';
+  const step = svgWidth / (MAX_HISTORY - 1);
+  const points = data.map((v, i) => {
+    const x = i * step;
+    const y = svgHeight - (v / maxVal) * svgHeight;
+    return `${x},${y}`;
+  });
+  return `M${points.join(' L')} L${(data.length - 1) * step},${svgHeight} L0,${svgHeight} Z`;
+}
+
+// ── Clock ──
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Render Tunnel Stats (from /api/stats) ──
+function renderTunnelStats(t) {
+  // Status
+  const isConnected = t.tunnel_status === 'connected';
+  const dot = document.getElementById('tunnelDot');
+  const statusText = document.getElementById('tunnelStatus');
+
+  dot.className = `w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-400 pulse-dot' : 'bg-red-400'}`;
+  statusText.textContent = t.tunnel_status;
+  statusText.className = `text-[10px] font-mono ${isConnected ? 'text-emerald-400' : 'text-red-400'}`;
+
+  // Stats
+  document.getElementById('tunnelPlayers').textContent = t.active_connections;
+  document.getElementById('tunnelPeak').textContent = t.peak_connections;
+  document.getElementById('tunnelTotal').textContent = t.total_connections.toLocaleString();
+  document.getElementById('tunnelTraffic').textContent = formatBytes(t.total_bytes_transferred);
+  document.getElementById('tunnelUptime').textContent = formatUptime(t.uptime_secs);
+
+  // Active IPs
+  const ipsEl = document.getElementById('activeIpsList');
+  if (!t.active_ips || t.active_ips.length === 0) {
+    ipsEl.innerHTML = '<div class="text-xs text-slate-600 font-mono">No active connections</div>';
+  } else {
+    ipsEl.innerHTML = t.active_ips.map(ip => `
+      <div class="flex items-center gap-2 py-0.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+        <span class="text-xs font-mono text-slate-300">${ip}</span>
+      </div>`).join('');
+  }
+
+  // Update top-bar connection status based on tunnel
+  setConnectionStatus(isConnected ? 'online' : 'tunnel-offline', isConnected ? 'Tunnel Online' : 'Tunnel Offline');
+}
+
+// ── Render SysInfo (from /api/sysinfo) ──
+function renderSysInfo(data) {
+  hasSysinfo = true;
+
+  // Host
+  document.getElementById('hostName').textContent = data.host.name;
+  document.getElementById('hostOS').textContent = data.host.os;
+  document.getElementById('kernelVersion').textContent = data.host.kernel;
+  document.getElementById('archInfo').textContent = data.host.arch;
+  document.getElementById('systemUptime').textContent = formatUptime(data.host.uptime_secs);
+
+  // CPU
+  const cpuPct = Math.round(data.cpu.usage_percent);
+  document.getElementById('cpuPercent').textContent = cpuPct;
+  setGauge('cpuGauge', cpuPct);
+  document.getElementById('cpuModel').textContent = data.cpu.model;
+  document.getElementById('cpuCores').textContent = `${data.cpu.cores}C / ${data.cpu.threads}T`;
+  document.getElementById('cpuFreq').textContent = (data.cpu.frequency_mhz / 1000).toFixed(2) + ' GHz';
+
+  // CPU cores
+  const coresEl = document.getElementById('coresList');
+  coresEl.innerHTML = data.cpu.per_core.map((pct, i) => {
+    const p = Math.round(pct);
+    const color = p > 80 ? 'bg-red-500' : p > 50 ? 'bg-amber-500' : 'bg-indigo-500';
+    return `
+      <div class="flex items-center gap-2">
+        <span class="text-[10px] font-mono text-slate-500 w-8">C${i}</span>
+        <div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+          <div class="h-full ${color} rounded-full bar-fill" style="width:${p}%"></div>
+        </div>
+        <span class="text-[10px] font-mono text-slate-400 w-8 text-right">${p}%</span>
+      </div>`;
+  }).join('');
+
+  // RAM
+  const ramPct = Math.round((data.memory.used / data.memory.total) * 100);
+  document.getElementById('ramPercent').textContent = ramPct;
+  setGauge('ramGauge', ramPct);
+  document.getElementById('ramUsed').textContent = `${formatBytes(data.memory.used)} / ${formatBytes(data.memory.total)}`;
+  document.getElementById('ramSwap').textContent = `Swap: ${formatBytes(data.memory.swap_used)} / ${formatBytes(data.memory.swap_total)}`;
+
+  // Disk (primary)
+  if (data.disks && data.disks.length > 0) {
+    const mainDisk = data.disks[0];
+    const diskPct = Math.round((mainDisk.used / mainDisk.total) * 100);
+    document.getElementById('diskPercent').textContent = diskPct;
+    setGauge('diskGauge', diskPct);
+    document.getElementById('diskUsed').textContent = `${formatBytes(mainDisk.used)} / ${formatBytes(mainDisk.total)}`;
+    document.getElementById('diskMount').textContent = `${mainDisk.name} → ${mainDisk.mount}`;
+
+    // Disks list
+    const disksEl = document.getElementById('disksList');
+    disksEl.innerHTML = data.disks.map(d => {
+      const p = Math.round((d.used / d.total) * 100);
+      const free = d.total - d.used;
+      return `
+        <div class="bg-slate-800/30 rounded-xl p-3">
+          <div class="flex justify-between items-center mb-2">
+            <div>
+              <span class="text-xs font-mono text-white">${d.mount}</span>
+              <span class="text-[10px] text-slate-500 ml-2">${d.name} · ${d.fs}</span>
+            </div>
+            <span class="text-xs font-mono text-amber-400">${p}%</span>
+          </div>
+          <div class="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+            <div class="h-full bg-gradient-to-r from-amber-500 to-amber-400 rounded-full bar-fill" style="width:${p}%"></div>
+          </div>
+          <div class="flex justify-between mt-1.5">
+            <span class="text-[10px] text-slate-500 font-mono">${formatBytes(d.used)} used</span>
+            <span class="text-[10px] text-slate-500 font-mono">${formatBytes(free)} free</span>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // Temperature
+  if (data.temperature) {
+    const temp = Math.round(data.temperature.cpu);
+    document.getElementById('tempValue').textContent = temp;
+    document.getElementById('tempValue').className = `text-2xl font-bold font-mono ${tempClass(temp)}`;
+    setGauge('tempGauge', temp, data.temperature.max || 100);
+    document.getElementById('tempLabel').textContent = data.temperature.label || 'CPU Package';
+    document.getElementById('tempMax').textContent = `Max: ${data.temperature.max || 100}°C`;
+  }
+
+  // Network
+  if (data.network) {
+    document.getElementById('netInterface').textContent = data.network.interface;
+
+    const rxRate = prevNetDown > 0 ? Math.max(0, (data.network.rx_bytes - prevNetDown) / (POLL_INTERVAL / 1000)) : 0;
+    const txRate = prevNetUp > 0 ? Math.max(0, (data.network.tx_bytes - prevNetUp) / (POLL_INTERVAL / 1000)) : 0;
+    prevNetDown = data.network.rx_bytes;
+    prevNetUp = data.network.tx_bytes;
+
+    document.getElementById('netUp').textContent = formatBytesPerSec(txRate);
+    document.getElementById('netDown').textContent = formatBytesPerSec(rxRate);
+    document.getElementById('netUpTotal').textContent = `Total: ${formatBytes(data.network.tx_bytes)}`;
+    document.getElementById('netDownTotal').textContent = `Total: ${formatBytes(data.network.rx_bytes)}`;
+
+    // Network sparkline
+    netUpHistory.push(txRate);
+    netDownHistory.push(rxRate);
+    if (netUpHistory.length > MAX_HISTORY) netUpHistory.shift();
+    if (netDownHistory.length > MAX_HISTORY) netDownHistory.shift();
+
+    const maxNet = Math.max(1, ...netUpHistory, ...netDownHistory) * 1.2;
+    document.getElementById('netUpPath').setAttribute('d', buildSparkline(netUpHistory, 400, 80, maxNet));
+    document.getElementById('netDownPath').setAttribute('d', buildSparkline(netDownHistory, 400, 80, maxNet));
+  }
+
+  // CPU/RAM History
+  cpuHistory.push(Math.round(data.cpu.usage_percent));
+  ramHistory.push(Math.round((data.memory.used / data.memory.total) * 100));
+  if (cpuHistory.length > MAX_HISTORY) cpuHistory.shift();
+  if (ramHistory.length > MAX_HISTORY) ramHistory.shift();
+
+  document.getElementById('cpuHistPath').setAttribute('d', buildSparkline(cpuHistory, 600, 120, 100));
+  document.getElementById('ramHistPath').setAttribute('d', buildSparkline(ramHistory, 600, 120, 100));
+
+  // Processes
+  if (data.processes) {
+    document.getElementById('processCount').textContent = `${data.processes.total} total`;
+    const procEl = document.getElementById('processList');
+    procEl.innerHTML = data.processes.list.map(p => `
+      <div class="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-800/40 transition">
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-mono text-slate-600 w-10">${p.pid}</span>
+          <span class="text-xs font-mono text-slate-300">${p.name}</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-[10px] font-mono text-indigo-400 w-12 text-right">${p.cpu.toFixed(1)}%</span>
+          <span class="text-[10px] font-mono text-cyan-400/60 w-12 text-right">${p.mem.toFixed(1)}%</span>
+        </div>
+      </div>`).join('');
+  }
+}
+
+// ── Connection status helper ──
+function setConnectionStatus(state, label) {
+  const el = document.getElementById('connectionStatus');
+  const styles = {
+    'online':         { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', dot: 'bg-emerald-400 pulse-dot', text: 'text-emerald-400' },
+    'tunnel-offline': { bg: 'bg-amber-500/10',   border: 'border-amber-500/20',   dot: 'bg-amber-400',            text: 'text-amber-400'   },
+    'error':          { bg: 'bg-red-500/10',      border: 'border-red-500/20',     dot: 'bg-red-400',              text: 'text-red-400'     },
+  };
+  const s = styles[state] || styles['error'];
+  el.className = `flex items-center gap-2 px-3 py-1.5 rounded-full ${s.bg} border ${s.border}`;
+  el.innerHTML = `<span class="w-2 h-2 rounded-full ${s.dot}"></span><span class="text-xs font-medium ${s.text}">${label}</span>`;
+}
+
+// ── Data fetching ──
+async function fetchData() {
+  let statsOk = false;
+  let sysinfoOk = false;
+
+  // 1. Fetch tunnel stats (existing /api/stats)
+  try {
+    const res = await fetch(`${API_BASE}/api/stats`, { signal: AbortSignal.timeout(3000) });
+    if (res.ok) {
+      const data = await res.json();
+      renderTunnelStats(data);
+      statsOk = true;
+    }
+  } catch (e) {
+    console.warn('[MC-Tunnel] /api/stats unavailable:', e.message);
+  }
+
+  // 2. Fetch sysinfo (new /api/sysinfo)
+  try {
+    const res = await fetch(`${API_BASE}/api/sysinfo`, { signal: AbortSignal.timeout(3000) });
+    if (res.ok) {
+      const data = await res.json();
+      renderSysInfo(data);
+      sysinfoOk = true;
+    }
+  } catch (e) {
+    console.warn('[MC-Tunnel] /api/sysinfo unavailable:', e.message);
+  }
+
+  // Update status if both APIs are down
+  if (!statsOk && !sysinfoOk) {
+    setConnectionStatus('error', 'API Unavailable');
+  } else if (statsOk && !sysinfoOk && !hasSysinfo) {
+    // /api/stats works but /api/sysinfo not yet implemented — that's fine
+    document.getElementById('hostOS').textContent = 'SysInfo endpoint not available yet (v0.5 feature)';
+  }
+}
+
+// ── Bootstrap ──
+fetchData();
+setInterval(fetchData, POLL_INTERVAL);
+</script>
+</body>
+</html>
