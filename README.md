@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-# mc_tunnel
-**Minecraft reverse-proxy tunnel over TCP.** Host a Minecraft server at home without port forwarding — route players through your VPS.
-=======
 # 🔗 mc-tunnel
 
 **Minecraft reverse-proxy tunnel over TCP.**
@@ -12,7 +8,22 @@ Host a Minecraft server at home without port forwarding — route players throug
 
 ---
 
+## 🤔 Why use this? / Зачем это нужно?
+
+**EN:** If your ISP uses **DS-Lite**, **CGNAT**, or any other technology that prevents you from getting a public IPv4 address — you simply **cannot** port-forward. Your router has no real external IP. This tool solves the problem: your home PC opens an **outbound** connection to a cheap VPS, and the VPS relays player traffic back through that tunnel. No port forwarding needed.
+
+**RU:** Если ваш провайдер использует **DS-Lite**, **CGNAT** или аналогичную технологию (например, провайдер PŸUR в Германии) — у вас **нет внешнего IPv4**, и проброс портов на роутере невозможен. Этот туннель решает проблему: домашний ПК сам открывает **исходящее** соединение к дешёвому VPS, а VPS перенаправляет трафик игроков обратно через этот туннель. Проброс портов не нужен.
+
+---
+
 ## 📐 Architecture / Архитектура
+
+### Quick overview / Быстрая схема
+
+```
+Player ──► [ VPS :25565 ] ══► ( Rust Tunnel :9000 ) ══► [ Home PC  127.0.0.1:25565 ]
+              public              encrypted tunnel              Minecraft Server
+```
 
 ```
                         ┌──────────── VPS (Linux) ────────────┐
@@ -66,7 +77,7 @@ source $HOME/.cargo/env
 ### Compile / Компиляция
 
 ```bash
-git clone https://github.com/qwbound/mc-tunnel.git
+git clone https://github.com/YOUR_USER/mc-tunnel.git
 cd mc-tunnel
 cargo build --release
 ```
@@ -242,4 +253,3 @@ MIT
 ---
 
 Made by **qwbound + Claude**
->>>>>>> 4c9b208 (Initial commit: mc-tunnel v0.2 with VPS/Client modes)
