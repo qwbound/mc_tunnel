@@ -1,0 +1,22 @@
+# ─── Режим: "vps" или "client" ───
+mode = "vps"
+
+# ─── VPS настройки ───
+# Порт для игроков (Minecraft)
+game_port = 25566
+# Порт туннеля (control + data)
+tunnel_port = 9000
+
+# ─── Client настройки ───
+# Адрес VPS (ip:tunnel_port)
+vps_address = "127.0.0.1:9000"
+# Локальный Minecraft сервер
+minecraft_address = "127.0.0.1:25565"
+# Порт для WebDashboard
+web_port = 3001
+
+# ─── Reconnect ───
+# Задержка перед переподключением (секунды)
+reconnect_delay_secs = 3
+# Макс. кол-во попыток (0 = бесконечно)
+max_reconnect_attempts = 0

@@ -7,6 +7,7 @@ export interface TunnelStats {
   uptime_secs: number;
   peak_connections: number;
   total_connections: number;
+  active_ips: string[];
 }
 
 export interface ConnectionInfo {

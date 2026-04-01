@@ -9,13 +9,18 @@ const generateMockStats = (): TunnelStats => ({
   uptime_secs: Math.floor(Date.now() / 1000) % 86400,
   peak_connections: Math.floor(Math.random() * 20) + 5,
   total_connections: Math.floor(Math.random() * 100) + 10,
+  active_ips: [
+    '192.168.1.100',
+    '10.0.0.50', 
+    '172.16.0.25'
+  ].slice(0, Math.floor(Math.random() * 3) + 1),
 });
 
 export function useStats(apiUrl: string, refreshInterval: number = 2000) {
   const [stats, setStats] = useState<TunnelStats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [useMock, setUseMock] = useState(false);
+  const [useMock] = useState(false);
 
   const fetchStats = useCallback(async () => {
     if (useMock) {
@@ -33,16 +38,15 @@ export function useStats(apiUrl: string, refreshInterval: number = 2000) {
       setStats(data);
       setError(null);
     } catch (err) {
-      // Fallback to mock data for demo
-      console.warn('API not available, using mock data');
-      setUseMock(true);
-      setStats(generateMockStats());
-      setError(null);
+      console.error('API Error:', err);
+      setError('Failed to connect to Rust backend');
+      // setStats(null); // Можно занулить, чтобы не видеть старые данные
     } finally {
       setLoading(false);
     }
-  }, [apiUrl, useMock]);
-
+  },
+  [apiUrl, useMock]);
+  
   useEffect(() => {
     fetchStats();
     const interval = setInterval(fetchStats, refreshInterval);

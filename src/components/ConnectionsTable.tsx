@@ -1,35 +1,12 @@
-import { formatBytes } from '../utils/format';
-
-interface Connection {
-  id: string;
-  player_addr: string;
-  connected_at: string;
-  bytes_up: number;
-  bytes_down: number;
-}
 
 interface ConnectionsTableProps {
-  connections: Connection[];
-}
-
-// Generate mock connections for demo
-function generateMockConnections(count: number): Connection[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `conn-${i + 1}`,
-    player_addr: `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}:${Math.floor(Math.random() * 60000) + 1024}`,
-    connected_at: new Date(Date.now() - Math.random() * 3600000).toISOString(),
-    bytes_up: Math.floor(Math.random() * 10000000),
-    bytes_down: Math.floor(Math.random() * 50000000),
-  }));
+  // Теперь принимаем просто массив строк, как присылает Rust
+  connections: string[]; 
 }
 
 export function ConnectionsTable({ connections }: ConnectionsTableProps) {
-  // Use mock data if no real connections
-  const displayConnections = connections.length > 0 
-    ? connections 
-    : generateMockConnections(Math.floor(Math.random() * 5) + 1);
-
-  if (displayConnections.length === 0) {
+  // Если массив пустой или не пришел, показываем заглушку
+  if (!connections || connections.length === 0) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Active Connections</h3>
@@ -51,28 +28,26 @@ export function ConnectionsTable({ connections }: ConnectionsTableProps) {
           <thead>
             <tr className="border-b border-gray-100">
               <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Player Address</th>
-              <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Connected</th>
-              <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Upload</th>
-              <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Download</th>
+              <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {displayConnections.map((conn) => (
-              <tr key={conn.id} className="hover:bg-gray-50 transition-colors">
+            {connections.map((ip, index) => (
+              <tr key={index} className="hover:bg-gray-50 transition-colors">
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <code className="text-sm font-mono text-gray-700">{conn.player_addr}</code>
+                    <code className="text-sm font-mono text-gray-700">{ip}</code>
                   </div>
                 </td>
-                <td className="py-3 px-4 text-sm text-gray-500">
-                  {new Date(conn.connected_at).toLocaleTimeString()}
+                <td className="py-3 px-4 text-sm">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                    Online
+                  </span>
                 </td>
-                <td className="py-3 px-4 text-sm text-right font-mono text-blue-600">
-                  ↑ {formatBytes(conn.bytes_up)}
-                </td>
-                <td className="py-3 px-4 text-sm text-right font-mono text-emerald-600">
-                  ↓ {formatBytes(conn.bytes_down)}
+                <td className="py-3 px-4 text-sm text-right text-gray-500 font-mono">
+                  {new Date().toLocaleTimeString()}
                 </td>
               </tr>
             ))}

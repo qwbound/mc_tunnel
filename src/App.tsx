@@ -138,12 +138,13 @@ export default function App() {
           />
         </div>
 
-        {/* Charts and Tables */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <TrafficChart currentBytes={stats?.total_bytes_transferred ?? 0} />
-          <ConnectionsTable connections={[]} />
-        </div>
-
+       {/* Charts and Tables */}
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+  <TrafficChart currentBytes={stats?.total_bytes_transferred ?? 0} />
+  
+  {/* МЕНЯЕМ ТУТ: передаем active_ips из нашего JSON */}
+<ConnectionsTable connections={stats?.active_ips || []} />
+</div>
         {/* Info Section */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">ℹ️ API Information</h3>
