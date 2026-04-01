@@ -1,0 +1,25 @@
+# Build artifacts
+/target/
+/node_modules/
+
+# Real config (contains IPs/secrets)
+config.toml
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+
+
+
+
+
+
+
