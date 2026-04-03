@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MC-Tunnel v0.6 — Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 5px currentColor; }
+            50% { box-shadow: 0 0 20px currentColor; }
+        }
+        .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+        .sparkline { stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-6">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-emerald-400">⛏️ MC-Tunnel</h1>
+                    <p class="text-gray-400">v0.6 — Dashboard</p>
+                </div>
+                <div id="connection-status" class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-gray-500" id="status-dot"></span>
+                    <span class="text-gray-400" id="status-text">Connecting...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <!-- Active Players -->
+            <div class="bg-gray-800 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-400">Active Players</span>
+                    <span class="text-2xl">🎮</span>
+                </div>
+                <p class="text-3xl font-bold text-emerald-400" id="active-players">0</p>
+            </div>
+
+            <!-- Peak Connections -->
+            <div class="bg-gray-800 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-400">Peak</span>
+                    <span class="text-2xl">📈</span>
+                </div>
+                <p class="text-3xl font-bold text-blue-400" id="peak-connections">0</p>
+            </div>
+
+            <!-- Total Connections -->
+            <div class="bg-gray-800 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-400">Total</span>
+                    <span class="text-2xl">🔢</span>
+                </div>
+                <p class="text-3xl font-bold text-purple-400" id="total-connections">0</p>
+            </div>
+
+            <!-- Traffic -->
+            <div class="bg-gray-800 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-400">Traffic</span>
+                    <span class="text-2xl">📊</span>
+                </div>
+                <p class="text-3xl font-bold text-amber-400" id="traffic">0 B</p>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Tunnel Status -->
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-200">🔌 Tunnel Status</h2>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-400">Status</span>
+                        <span id="tunnel-status" class="px-3 py-1 rounded-full text-sm font-medium bg-red-500/20 text-red-400">
+                            Disconnected
+                        </span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Uptime</span>
+                        <span id="uptime" class="text-white">—</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Last Update</span>
+                        <span id="last-update" class="text-white">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active IPs -->
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-200">🌐 Active IPs</h2>
+                <div id="active-ips" class="space-y-2 max-h-48 overflow-y-auto">
+                    <p class="text-gray-500">No active connections</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Connection History Graph -->
+        <div class="mt-6 bg-gray-800 rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-200">📈 Connection History</h2>
+            <div class="h-32 flex items-end gap-1" id="history-chart">
+                <!-- Bars will be generated by JS -->
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-8 text-center text-gray-500 text-sm">
+            <p>MC-Tunnel v0.6 • <a href="https://github.com/qwbound/mc_tunnel" class="text-emerald-400 hover:underline">GitHub</a></p>
+        </footer>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = window.location.origin;
+        const UPDATE_INTERVAL = 2000;
+        
+        // History data
+        const connectionHistory = [];
+        const MAX_HISTORY = 60;
+
+        // Format bytes to human readable
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Format uptime
+        function formatUptime(seconds) {
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            
+            if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+            if (hours > 0) return `${hours}h ${minutes}m ${secs}s`;
+            if (minutes > 0) return `${minutes}m ${secs}s`;
+            return `${secs}s`;
+        }
+
+        // Update connection history chart
+        function updateChart() {
+            const chart = document.getElementById('history-chart');
+            const maxVal = Math.max(...connectionHistory, 1);
+            
+            chart.innerHTML = connectionHistory.map((val, i) => {
+                const height = (val / maxVal) * 100;
+                const opacity = 0.3 + (i / connectionHistory.length) * 0.7;
+                return `<div class="flex-1 bg-emerald-500 rounded-t transition-all duration-300" 
+                            style="height: ${Math.max(height, 2)}%; opacity: ${opacity};"
+                            title="${val} players"></div>`;
+            }).join('');
+        }
+
+        // Fetch stats from API
+        async function fetchStats() {
+            try {
+                const response = await fetch('/api/stats');
+                if (!response.ok) throw new Error('API error');
+                
+                const data = await response.json();
+                
+                // Update status indicator
+                const statusDot = document.getElementById('status-dot');
+                const statusText = document.getElementById('status-text');
+                
+                if (data.tunnel_status === 'connected') {
+                    statusDot.className = 'w-3 h-3 rounded-full bg-emerald-500 pulse-glow';
+                    statusText.textContent = 'Connected';
+                    statusText.className = 'text-emerald-400';
+                } else {
+                    statusDot.className = 'w-3 h-3 rounded-full bg-red-500';
+                    statusText.textContent = 'Disconnected';
+                    statusText.className = 'text-red-400';
+                }
+                
+                // Update stats
+                document.getElementById('active-players').textContent = data.active_connections;
+                document.getElementById('peak-connections').textContent = data.peak_connections;
+                document.getElementById('total-connections').textContent = data.total_connections;
+                document.getElementById('traffic').textContent = formatBytes(data.total_bytes_transferred);
+                document.getElementById('uptime').textContent = formatUptime(data.uptime_secs);
+                document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+                
+                // Update tunnel status badge
+                const tunnelStatus = document.getElementById('tunnel-status');
+                if (data.tunnel_status === 'connected') {
+                    tunnelStatus.className = 'px-3 py-1 rounded-full text-sm font-medium bg-emerald-500/20 text-emerald-400';
+                    tunnelStatus.textContent = 'Connected';
+                } else {
+                    tunnelStatus.className = 'px-3 py-1 rounded-full text-sm font-medium bg-red-500/20 text-red-400';
+                    tunnelStatus.textContent = 'Disconnected';
+                }
+                
+                // Update active IPs
+                const ipsContainer = document.getElementById('active-ips');
+                if (data.active_ips && data.active_ips.length > 0) {
+                    ipsContainer.innerHTML = data.active_ips.map(ip => `
+                        <div class="flex items-center gap-2 bg-gray-700/50 rounded px-3 py-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span class="font-mono text-sm">${ip}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    ipsContainer.innerHTML = '<p class="text-gray-500">No active connections</p>';
+                }
+                
+                // Update history
+                connectionHistory.push(data.active_connections);
+                if (connectionHistory.length > MAX_HISTORY) {
+                    connectionHistory.shift();
+                }
+                updateChart();
+                
+            } catch (error) {
+                console.error('Failed to fetch stats:', error);
+                document.getElementById('status-dot').className = 'w-3 h-3 rounded-full bg-amber-500';
+                document.getElementById('status-text').textContent = 'Connection Error';
+                document.getElementById('status-text').className = 'text-amber-400';
+            }
+        }
+
+        // Initialize
+        fetchStats();
+        setInterval(fetchStats, UPDATE_INTERVAL);
+        
+        // Initialize chart with empty data
+        for (let i = 0; i < 30; i++) {
+            connectionHistory.push(0);
+        }
+        updateChart();
+    </script>
+</body>
+</html>
