@@ -1,0 +1,33 @@
+[package]
+name = "mc-tunnel"
+version = "0.6.0"
+edition = "2021"
+description = "Minecraft reverse-proxy tunnel over TCP with Web Dashboard"
+repository = "https://github.com/qwbound/mc_tunnel"
+license = "MIT"
+authors = ["qwbound"]
+keywords = ["minecraft", "tunnel", "proxy", "tcp", "reverse-proxy"]
+categories = ["network-programming", "games"]
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+
+# Web server for Dashboard API
+axum = "0.7"
+tower-http = { version = "0.5", features = ["cors"] }
+
+[profile.release]
+lto = true
+opt-level = 3
+codegen-units = 1
+strip = true

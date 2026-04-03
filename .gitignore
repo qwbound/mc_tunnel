@@ -1,0 +1,20 @@
+# Build artifacts
+/target/
+Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Config (contains sensitive data)
+config.toml
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
